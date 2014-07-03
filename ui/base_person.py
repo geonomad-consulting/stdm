@@ -119,7 +119,16 @@ class RespondentEditor(BasePerson):
         self.gridLayout.addWidget(lblRole, rowCount-1, 0, 1, 1)
         self.gridLayout.addWidget(self.cboRole, rowCount-1, 1, 1, 1)
         self.gridLayout.addWidget(self.buttonBox,rowCount,0,1,2)
-        
+
+class EnumeratorEditor(BasePerson):
+    """
+    Create/edit an enumerator's record
+    """
+    def __init__(self,parent=None,datamodel = Enumerator):
+        BasePerson.__init__(self,parent,datamodel)
+
+        self.setWindowTitle(QApplication.translate("EnumeratorEditor","Enumerator Editor"))
+
 class WitnessEditor(BasePerson):
     '''
     Dialog for managing attributes for a witness's record.

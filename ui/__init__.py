@@ -49,7 +49,8 @@ from .base_person import (
                          BasePerson,
                          RespondentEditor,
                          WitnessEditor,
-                         FarmerEditor
+                         FarmerEditor,
+                         EnumeratorEditor
                          )
 from .garden_editor import (
                             GardenEditor,

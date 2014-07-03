@@ -30,7 +30,7 @@ from .admin_unit_manager import VIEW,MANAGE,SELECT
 from .ui_entity_browser import Ui_EntityBrowser
 from .helpers import SupportsManageMixin
 from .notification import NotificationBar, ERROR, WARNING,INFO
-from .base_person import RespondentEditor,WitnessEditor,FarmerEditor
+from .base_person import RespondentEditor,WitnessEditor,FarmerEditor,EnumeratorEditor
 from stdm.data import STDMDb, tableCols
 from .stdmdialog import declareMapping
 from .data_reader_form import STDMForm,STDMEntityForm
@@ -501,12 +501,13 @@ class ContentGroupEntityBrowser(EntityBrowserWithEditor):
         """
         return self._tableContentGroup
     
-class EnumeratorEntityBrowser(EntityBrowser):
+class EnumeratorEntityBrowser(EntityBrowserWithEditor):
     '''
     Browser for enumerator records.
     '''
-    def __init__(self,parent = None,state = MANAGE):
-        EntityBrowser.__init__(self, parent, Enumerator, state)
+    def __init__(self,parent = None,state = VIEW|MANAGE):
+        EntityBrowserWithEditor.__init__(self, Enumerator,parent, state)
+        self._editorDialog = EnumeratorEditor
         
     def title(self):
         return QApplication.translate("EnumeratorEntityBrowser", "Enumerator Records")
