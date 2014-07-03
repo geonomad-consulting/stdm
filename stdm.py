@@ -196,14 +196,12 @@ class STDMQGISLoader(object):
             self.loginAct.setEnabled(False)   
             
             #Get STDM tables
-            self.stdmTables = spatial_tables()                         
-            self.loadModules()
-            """
+            self.stdmTables = spatial_tables()
+
             try:
                 self.loadModules()
             except Exception as ex:
                 QMessageBox.warning(self.iface.mainWindow(),QApplication.translate("STDM","Error"),ex.message)
-            """
             
     def loadModules(self):
         '''
@@ -316,11 +314,9 @@ class STDMQGISLoader(object):
         self.createFeatureAct.triggered.connect(self.onCreateFeature)
         contentMenu.triggered.connect(self.widgetLoader)
         self.wzdAct.triggered.connect(self.workspaceLoader)
-        
-        
+
         QObject.connect(self.newSTRAct, SIGNAL("triggered()"), self.newSTR)
         QObject.connect(self.viewSTRAct, SIGNAL("triggered()"), self.onViewSTR)
-        
         
         #Create content items
         contentAuthCnt = ContentGroup.contentItemFromQAction(self.contentAuthAct)
@@ -407,11 +403,8 @@ class STDMQGISLoader(object):
                 self.moduleCntGroup.deleteContentItem().code =capabilities[3]
                 self.moduleCntGroup.register()
                 contentMenu.addAction(contentAction)
-        
-        
                          
         #Create content groups and add items
-                
         self.contentAuthCntGroup = ContentGroup(username)
         self.contentAuthCntGroup.addContentItem(contentAuthCnt)
         self.contentAuthCntGroup.setContainerItem(self.contentAuthAct)
@@ -450,8 +443,11 @@ class STDMQGISLoader(object):
         self.surveyCntGroup.deleteContentItem().code = "C916ACF3-30E6-45C3-B8E1-22E56D0AFB3E"
         self.surveyCntGroup.register()
 
-        self.farmerCntGroup = ContentGroup(username,self.docGeneratorAct)
-        self.farmerCntGroup.addContentItem(farmerCnt)
+        self.farmerCntGroup = TableContentGroup(username,self.farmerAct.text(),self.farmerAct)
+        self.farmerCntGroup.createContentItem().code = "631FE75B-39B7-4617-97C6-5619478EC32E"
+        self.farmerCntGroup.readContentItem().code = "48609A3D-3EAD-418E-8851-6DC38C1BFFC8"
+        self.farmerCntGroup.updateContentItem().code = "629829E7-2B4E-4C70-B02E-FBF7D7245A97"
+        self.farmerCntGroup.deleteContentItem().code = "D4BD8BD5-582B-4113-9384-B0AE69A37358"
         self.farmerCntGroup.register()
 
         self.docDesignerCntGroup = ContentGroup(username,self.docDesignerAct)
@@ -478,8 +474,6 @@ class STDMQGISLoader(object):
         
         self.toolbarLoader.addContent(self.contentAuthCntGroup,[adminMenu,adminBtn])
         self.toolbarLoader.addContent(self.userRoleCntGroup, [adminMenu,adminBtn])
-        self.toolbarLoader.addContent(self.moduleCntGroup, [contentMenu,contentBtn])
-        self.menubarLoader.addContent(self.moduleCntGroup, [contentMenu,contentBtn])
         
         self.toolbarLoader.addContent(self.adminUnitsCntGroup)
         self.menubarLoader.addContent(self.adminUnitsCntGroup)
@@ -487,12 +481,12 @@ class STDMQGISLoader(object):
         self.toolbarLoader.addContent(self.importCntGroup)
         self.toolbarLoader.addContent(self.exportCntGroup)
         self.toolbarLoader.addContent(tbSeparator)
-        self.toolbarLoader.addContent(self.wzdConfigCntGroup)
         self.toolbarLoader.addContent(self.docDesignerCntGroup)
         self.toolbarLoader.addContent(self.docGeneratorCntGroup)
         self.toolbarLoader.addContent(self.rptBuilderCntGroup)
         self.toolbarLoader.addContent(tbSeparator)
         self.toolbarLoader.addContent(self.surveyCntGroup)
+        self.toolbarLoader.addContent(self.farmerCntGroup)
         self.toolbarLoader.addContent(self.STRCntGroup)
         self.toolbarLoader.addContent(tbSeparator)
         self.toolbarLoader.addContent(self.spatialEditingCntGroup)
