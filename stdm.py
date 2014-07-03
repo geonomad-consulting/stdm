@@ -450,6 +450,10 @@ class STDMQGISLoader(object):
         self.surveyCntGroup.deleteContentItem().code = "C916ACF3-30E6-45C3-B8E1-22E56D0AFB3E"
         self.surveyCntGroup.register()
 
+        self.farmerCntGroup = ContentGroup(username,self.docGeneratorAct)
+        self.farmerCntGroup.addContentItem(farmerCnt)
+        self.farmerCntGroup.register()
+
         self.docDesignerCntGroup = ContentGroup(username,self.docDesignerAct)
         self.docDesignerCntGroup.addContentItem(documentDesignerCnt)
         self.docDesignerCntGroup.register()
