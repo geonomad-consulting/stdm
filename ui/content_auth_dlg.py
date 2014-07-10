@@ -18,21 +18,75 @@ email                : gkahiu@gmail.com
  *                                                                         *
  ***************************************************************************/
 """
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt4.QtCore import (
+    pyqtSignal,
+    Qt
+)
+
+from PyQt4.QtGui import (
+    QDialog,
+    QListWidget,
+    QIcon,
+    QWidget,
+    QStandardItem,
+    QStandardItemModel,
+    QListWidgetItem,
+    QApplication,
+    QGridLayout
+)
 
 from stdm import resources_rc
 
 from stdm.security import RoleProvider
 from stdm.data import Content,Role, UsersRolesModel, STDMDb, Base
 from stdm.utils import *
-from sqlalchemy.orm import clear_mappers
-from sqlalchemy import Table
-
 
 from ui_content_auth import Ui_frmContentAuth
 
-class contentAuthDlg(QDialog, Ui_frmContentAuth):
+class ContentListWidget(QListWidget):
+    """
+    List view for displaying content items based on the category they belong to
+    """
+
+    #Signals
+    contentSelected = pyqtSignal(QListWidgetItem)
+
+    def __init__(self,parent=None):
+        QListWidget.__init__(self,parent)
+
+        self._contentItems = []
+
+        #Initialize properties
+        self.setAlternatingRowColors(True)
+
+        self.itemActivated.connect(self.onContentClicked)
+        self.itemClicked.connect(self.onContentClicked)
+
+    def onContentClicked(self,item):
+        """
+        Slot activated when a content item is selected to load the roles for the specified content items.
+
+        :param item: List widget item that was activated or clicked.
+        :type item: QListWidgetItem
+        """
+        self.contentSelected.emit(item)
+
+    def addContentItem(self,cnt):
+        """
+        :param cnt: Content item to be inserted into the view at the last position.
+        :type cnt: Content
+        """
+        self.addItem(cnt.name)
+        self._contentItems.append(cnt)
+
+    def contentItems(self):
+        """
+        :return: Content items currently displayed by the widget.
+        :rtype: list
+        """
+        return self._contentItems
+
+class ContentAuthDlg(QDialog, Ui_frmContentAuth):
     '''
     Content authorization dialog
     '''
@@ -60,27 +114,22 @@ class contentAuthDlg(QDialog, Ui_frmContentAuth):
         self.lstRoles.setEnabled(False)  
         
         #Connect signals
-        QObject.connect(self.lstContent, SIGNAL("activated(const QModelIndex&)"),self.onContentClicked)      
-        QObject.connect(self.lstContent, SIGNAL("clicked(const QModelIndex&)"),self.onContentClicked)
-        QObject.connect(self.lstRoles, SIGNAL("activated(const QModelIndex&)"),self.onRoleSelected)      
-        QObject.connect(self.lstRoles, SIGNAL("clicked(const QModelIndex&)"),self.onRoleSelected)
+        self.lstRoles.activated.connect(self.onRoleSelected)
+        self.lstRoles.clicked.connect(self.onRoleSelected)
 
     def loadContent(self):
         '''
-        Loads STDM content items
+        Loads STDM content items.
         '''
         self.content = Content()
-        #self.content=Table('content_base',Base.metadata,autoload=True,autoload_with=STDMDb.instance().engine)
         cntItems = self.content.queryObject().all()
-        '''
-        self.content=Table('content_base',Base.metadata,autoload=True,autoload_with=STDMDb.instance().engine)
-        
-        session= STDMDb.instance().session
-        cntItems=session.query(self.content)
-        '''
-        cnts = [cntItem.name for cntItem in cntItems]
-        self.contentModel = UsersRolesModel(cnts)        
-        self.lstContent.setModel(self.contentModel)
+
+        cntWidget = ContentListWidget()
+
+        for cnt in cntItems:
+            cntWidget.addContentItem(cnt)
+
+        self._insertContentList(cntWidget)
         
     def loadRoles(self,contentname = ""):
         '''
@@ -114,7 +163,21 @@ class contentAuthDlg(QDialog, Ui_frmContentAuth):
                 
                 self.roleMappingsModel.appendRow(roleItem)
              
-        self.lstRoles.setModel(self.roleMappingsModel)       
+        self.lstRoles.setModel(self.roleMappingsModel)
+
+    def _insertContentList(self,cntListWidget):
+        """
+        Insert a content list widget into the tab container. This method ensures that the widget is positioned
+        correctly in the tab widget.
+
+        :param cntListWidget: Content list widget that will be added to the tab container.
+        :type cntListWidget: ContentListWidget
+        """
+        tab = QWidget()
+        gridLayout = QGridLayout(tab)
+        gridLayout.addWidget(cntListWidget, 0, 0, 1, 1)
+
+        self.tbContentItems.addTab(tab,QApplication.translate("ContentAuthDlg","Standard"))
         
     def _createNewRoleItem(self,rolename):
         '''

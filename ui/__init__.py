@@ -8,7 +8,7 @@ from .notification import (
                               INFO,
                               WARNING
                               )
-from .content_auth_dlg import contentAuthDlg
+from .content_auth_dlg import ContentAuthDlg
 from .new_str_wiz import newSTRWiz
 from .view_str import ViewSTRWidget
 from .propertyPreview import PropertyPreviewWidget

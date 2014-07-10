@@ -32,7 +32,7 @@ from ui import (
                 loginDlg, 
                 changePwdDlg, 
                 manageAccountsDlg, 
-                contentAuthDlg,
+                ContentAuthDlg,
                 newSTRWiz, 
                 ViewSTRWidget, 
                 AdminUnitSelector, 
@@ -551,7 +551,7 @@ class STDMQGISLoader(object):
         '''
         Slot for showing the content authorization dialog
         '''
-        frmAuthContent = contentAuthDlg(self)
+        frmAuthContent = ContentAuthDlg(self)
         frmAuthContent.exec_()
         
         
