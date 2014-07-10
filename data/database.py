@@ -248,6 +248,7 @@ class Content(Model,Base):
     '''
     __tablename__ = "content_base"
     id = Column(Integer,primary_key = True)
+    category = Column(String(100),default=QApplication.translate("ContentItem","Standard"))
     name = Column(String(100), unique = True)
     code = Column(String(100),unique = True) 
     roles = relationship("Role", secondary = "content_roles", backref = "contents")  

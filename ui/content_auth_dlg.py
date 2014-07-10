@@ -217,7 +217,7 @@ class ContentAuthDlg(QDialog, Ui_frmContentAuth):
             
             self.blockSignals(True)            
             
-            #Add role to the content item if the item is selected  or remove if it was previosuly checked
+            #Add role to the content item if the item is selected  or remove if it was previously checked
             if item.checkState() == Qt.Checked:    
                 self.currentContent.roles.append(rl)             
                 
