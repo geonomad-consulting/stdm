@@ -407,11 +407,8 @@ class STDMQGISLoader(object):
                 self.moduleCntGroup.deleteContentItem().code =capabilities[3]
                 self.moduleCntGroup.register()
                 contentMenu.addAction(contentAction)
-        
-        
-                         
+
         #Create content groups and add items
-                
         self.contentAuthCntGroup = ContentGroup(username)
         self.contentAuthCntGroup.addContentItem(contentAuthCnt)
         self.contentAuthCntGroup.setContainerItem(self.contentAuthAct)

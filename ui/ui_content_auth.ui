@@ -27,7 +27,7 @@
    <item row="1" column="0">
     <widget class="QGroupBox" name="groupBox">
      <property name="title">
-      <string>Content Items</string>
+      <string>Content Items:</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
       <item row="0" column="0">
@@ -45,7 +45,7 @@
       </size>
      </property>
      <property name="title">
-      <string>Roles</string>
+      <string>Roles:</string>
      </property>
      <layout class="QGridLayout" name="gridLayout">
       <item row="0" column="0">

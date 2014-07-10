@@ -17,7 +17,7 @@ email                : gkahiu@gmail.com
  *                                                                         *
  ***************************************************************************/
 """
-from stdm.data import STDMDb, Role
+from stdm.data import STDMDb, Role, spatial_tables
 from stdm.utils import *
 from exception import SecurityException
 
@@ -131,7 +131,7 @@ class RoleProvider(object):
     
     def CreateRole(self,roleName,description='',grantSchema = 'public'):
         '''
-        Create a new role
+        Create a new role.
         '''
         sql = []
         sql.append("CREATE ROLE %s CREATEROLE;"%(roleName,))
@@ -145,6 +145,13 @@ class RoleProvider(object):
         all privileges.                 
         '''
         sql.append("GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA %s TO %s;"%(grantSchema,roleName))
+
+        '''
+        We need to manually grant control to the spatial tables so that the administrator can grant/revoke access
+        to specific privileges such as INSERT, SELECT, UPDATE and DELETE.
+        '''
+        spTables = spatial_tables()
+
         sqlStr = ''.join(sql)
         t = text(sqlStr)
         self._execute(t)

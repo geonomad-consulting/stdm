@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_content_auth.ui'
 #
-# Created: Thu Jul 10 14:50:57 2014
+# Created: Thu Jul 10 15:58:22 2014
 #      by: PyQt4 UI code generator 4.10.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -65,6 +65,6 @@ class Ui_frmContentAuth(object):
     def retranslateUi(self, frmContentAuth):
         frmContentAuth.setWindowTitle(_translate("frmContentAuth", "Content Authorization", None))
         self.label.setText(_translate("frmContentAuth", "<html><head/><body><p>Click on a content item in the table on the left-hand side and check/uncheck to approve/disapprove the authorised roles on the table in the right-hand side below.</p></body></html>", None))
-        self.groupBox.setTitle(_translate("frmContentAuth", "Content Items", None))
-        self.groupBox_2.setTitle(_translate("frmContentAuth", "Roles", None))
+        self.groupBox.setTitle(_translate("frmContentAuth", "Content Items:", None))
+        self.groupBox_2.setTitle(_translate("frmContentAuth", "Roles:", None))
 

@@ -51,10 +51,11 @@ class ContentListWidget(QListWidget):
     #Signals
     contentSelected = pyqtSignal(QListWidgetItem)
 
-    def __init__(self,parent=None):
+    def __init__(self,category,parent=None):
         QListWidget.__init__(self,parent)
 
         self._contentItems = []
+        self._category = category
 
         #Initialize properties
         self.setAlternatingRowColors(True)
@@ -86,6 +87,13 @@ class ContentListWidget(QListWidget):
         """
         return self._contentItems
 
+    def category(self):
+        """
+        :return: The grouping name of the content items displayed by the list widget.
+        :rtype: str
+        """
+        return self._category
+
 class ContentAuthDlg(QDialog, Ui_frmContentAuth):
     '''
     Content authorization dialog
@@ -96,6 +104,9 @@ class ContentAuthDlg(QDialog, Ui_frmContentAuth):
         
         #Initialize the dialog
         self.initGui()
+
+        #Mapping of content items categories and corresponding widgets
+        self._cntCategories = {}
         
         #Load users
         self.loadContent()
@@ -118,18 +129,30 @@ class ContentAuthDlg(QDialog, Ui_frmContentAuth):
         self.lstRoles.clicked.connect(self.onRoleSelected)
 
     def loadContent(self):
-        '''
+        """
         Loads STDM content items.
-        '''
+        """
+
         self.content = Content()
         cntItems = self.content.queryObject().all()
 
-        cntWidget = ContentListWidget()
-
         for cnt in cntItems:
-            cntWidget.addContentItem(cnt)
+            category = cnt.category
 
-        self._insertContentList(cntWidget)
+            #Use default category if none is specified
+            if category == "":
+                category = QApplication.translate("ContentAuthDlg","General")
+
+            if not category in self._cntCategories:
+                cntWidget = ContentListWidget(category)
+                cntWidget.contentSelected.connect(self.onContentClicked)
+                self._insertContentList(cntWidget)
+                self._cntCategories[category] = cntWidget
+
+            else:
+                cntWidget = self._cntCategories[category]
+
+            cntWidget.addContentItem(cnt)
         
     def loadRoles(self,contentname = ""):
         '''
@@ -140,7 +163,7 @@ class ContentAuthDlg(QDialog, Ui_frmContentAuth):
         roles = []
         
         #Load the corresponding roles for the specified content item
-        cnt=Content()
+        cnt = Content()
         if contentname != "":
             self.currentContent = self.content.queryObject().filter(Content.name == contentname).first()
             if self.currentContent:                
@@ -177,7 +200,7 @@ class ContentAuthDlg(QDialog, Ui_frmContentAuth):
         gridLayout = QGridLayout(tab)
         gridLayout.addWidget(cntListWidget, 0, 0, 1, 1)
 
-        self.tbContentItems.addTab(tab,QApplication.translate("ContentAuthDlg","Standard"))
+        self.tbContentItems.addTab(tab,cntListWidget.category())
         
     def _createNewRoleItem(self,rolename):
         '''
@@ -193,12 +216,12 @@ class ContentAuthDlg(QDialog, Ui_frmContentAuth):
         
         return roleItem
     
-    def onContentClicked(self,index):
+    def onContentClicked(self,item):
         '''
         Slot activated when a content item is selected to load the roles for the specified content items
         '''
         self.lstRoles.setEnabled(True)
-        contentName = index.data()
+        contentName = item.text()
         self.loadRoles(contentName)
         
     def onRoleSelected(self,index):
