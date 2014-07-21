@@ -316,12 +316,9 @@ class STDMQGISLoader(object):
         self.createFeatureAct.triggered.connect(self.onCreateFeature)
         contentMenu.triggered.connect(self.widgetLoader)
         self.wzdAct.triggered.connect(self.workspaceLoader)
-        
-        
-        QObject.connect(self.newSTRAct, SIGNAL("triggered()"), self.newSTR)
-        QObject.connect(self.viewSTRAct, SIGNAL("triggered()"), self.onViewSTR)
-        
-        
+        self.newSTRAct.triggered.connect(self.onNewSTR)
+        self.viewSTRAct.triggered.connect(self.onViewSTR)
+
         #Create content items
         contentAuthCnt = ContentGroup.contentItemFromQAction(self.contentAuthAct)
         contentAuthCnt.code = "E59F7CC1-0D0E-4EA2-9996-89DACBD07A83"
@@ -401,10 +398,10 @@ class STDMQGISLoader(object):
             capabilities=contentGroup(self._moduleItems[k])
             if capabilities!=None:
                 self.moduleCntGroup = TableContentGroup(username,k,contentAction)
-                self.moduleCntGroup.createContentItem().code =capabilities[0]
-                self.moduleCntGroup.readContentItem().code =capabilities[1]
-                self.moduleCntGroup.updateContentItem().code =capabilities[2]
-                self.moduleCntGroup.deleteContentItem().code =capabilities[3]
+                self.moduleCntGroup.createContentItem().code = capabilities[0]
+                self.moduleCntGroup.readContentItem().code = capabilities[1]
+                self.moduleCntGroup.updateContentItem().code = capabilities[2]
+                self.moduleCntGroup.deleteContentItem().code = capabilities[3]
                 self.moduleCntGroup.register()
                 contentMenu.addAction(contentAction)
 
@@ -423,15 +420,7 @@ class STDMQGISLoader(object):
         self.adminUnitsCntGroup.addContentItem(adminUnitsCnt)
         self.adminUnitsCntGroup.setContainerItem(self.manageAdminUnitsAct)
         self.adminUnitsCntGroup.register()
-        
-        self.spatialEditingCntGroup = ContentGroup(username,self.spatialEditorAct)
-        self.spatialEditingCntGroup.addContentItem(spatialEditingCnt)
-        self.spatialEditingCntGroup.register()
-        
-        self.createFeatureCntGroup = ContentGroup(username,self.createFeatureAct)
-        self.createFeatureCntGroup.addContentItem(createFeatureCnt)
-        self.createFeatureCntGroup.register()
-        
+
         self.wzdConfigCntGroup = ContentGroup(username,self.wzdAct)
         self.wzdConfigCntGroup.addContentItem(wzdConfigCnt)
         self.wzdConfigCntGroup.register()
@@ -468,6 +457,15 @@ class STDMQGISLoader(object):
         self.rptBuilderCntGroup.register()
         
         self.stdmMenu.addAction(self.wzdAct)
+
+        #Spatial tools
+        self.spatialEditingCntGroup = ContentGroup(username,self.spatialEditorAct)
+        self.spatialEditingCntGroup.addContentItem(spatialEditingCnt)
+        self.spatialEditingCntGroup.register()
+
+        self.createFeatureCntGroup = ContentGroup(username,self.createFeatureAct)
+        self.createFeatureCntGroup.addContentItem(createFeatureCnt)
+        self.createFeatureCntGroup.register()
         
         self.toolbarLoader.addContent(self.contentAuthCntGroup,[adminMenu,adminBtn])
         self.toolbarLoader.addContent(self.userRoleCntGroup, [adminMenu,adminBtn])
@@ -514,13 +512,6 @@ class STDMQGISLoader(object):
         '''
         self.mapToolCreateFeature = StdmMapToolCreateFeature(self.iface)
         self.mapToolCreateFeature.setAction(self.createFeatureAct)
-        
-    def onActionAuthorised(self,name):
-        '''
-        This slot is raised when a toolbar action is authorised for access by the currently
-        logged in user.
-        '''        
-        pass    
             
     def onContentAdded(self,stdmAction):  
         '''
@@ -577,7 +568,7 @@ class STDMQGISLoader(object):
         else:
             self.propMngtAct.setChecked(False)
             
-    def newSTR(self):
+    def onNewSTR(self):
         '''
         Slot for showing the wizard for defining a new social
         tenure relationship
@@ -813,7 +804,7 @@ class STDMQGISLoader(object):
         tbList=self._moduleItems.values()
         dispName=QAction.text()
         if dispName=='Social Tenure Relationship':
-            self.newSTR()
+            self.onNewSTR()
         else:
             tableName=self._moduleItems.get(dispName)
             if tableName in tbList:

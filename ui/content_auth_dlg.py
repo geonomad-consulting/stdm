@@ -132,7 +132,6 @@ class ContentAuthDlg(QDialog, Ui_frmContentAuth):
         """
         Loads STDM content items.
         """
-
         self.content = Content()
         cntItems = self.content.queryObject().all()
 
@@ -155,9 +154,9 @@ class ContentAuthDlg(QDialog, Ui_frmContentAuth):
             cntWidget.addContentItem(cnt)
         
     def loadRoles(self,contentname = ""):
-        '''
+        """
         Loads the roles in the database cluster
-        '''
+        """
         self.roleProvider = RoleProvider()
         sysRoles = self.roleProvider.GetAllRoles()
         roles = []
@@ -174,8 +173,7 @@ class ContentAuthDlg(QDialog, Ui_frmContentAuth):
         self.roleMappingsModel.setColumnCount(1)
         
         #Add role items into the standard item model
-        for r in range(len(sysRoles)):
-            role = sysRoles[r]
+        for role in sysRoles:
             if role.name != "postgres":
                 roleItem = self._createNewRoleItem(role.name)
                 

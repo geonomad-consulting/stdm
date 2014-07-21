@@ -29,10 +29,10 @@ from stdm.ui.notification import NotificationBar,ERROR,WARNING,INFO
 
 __all__ = ["SAVE","UPDATE","MapperMixin","QgsFeatureMappperMixin"]
 
-'''
+"""
 Save mode enum for specifying whether a widget is in 'Save' mode - when creating 
 a new record or 'Update' mode, which is used when updating an existing record.
-'''
+"""
 SAVE = 2200
 UPDATE = 2201
 

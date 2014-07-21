@@ -21,7 +21,7 @@ from PyQt4.QtCore import pyqtSignal,QObject
 
 from stdm.security import Authorizer, SecurityException
 from stdm.data import Content, initLookups, Role, STDMDb, Base
-from stdm.utils import randomCodeGenerator,HashableMixin
+from stdm.utils import randomCodeGenerator,HashableMixin,getIndex
 from sqlalchemy import Table
 
 __all__ = ["ContentGroup,TableContentGroup"]
@@ -31,6 +31,7 @@ class ContentGroup(QObject,HashableMixin):
     Groups related content items together.
     """
     contentAuthorized = pyqtSignal(Content)
+    registeredItems = []
     
     def __init__(self,username,containerItem = None,parent = None):
         QObject.__init__(self,parent)
@@ -125,7 +126,6 @@ class ContentGroup(QObject,HashableMixin):
             for c in self.contentItems():
                 if isinstance(c,Content):
                     cnt = Content()
-                    #self.content=Table('content_base',Base.metadata,autoload=True,autoload_with=STDMDb.instance().engine)
                     qo = cnt.queryObject()
                     cn = qo.filter(Content.code == c.code).first()
                     
@@ -133,8 +133,8 @@ class ContentGroup(QObject,HashableMixin):
                     if cn == None:                            
                         #Check if the 'postgres' role is defined, if not then create one
                         rl = Role()
-                        rolequery = rl.queryObject()
-                        role = rolequery.filter(Role.name == pg_account).first()
+                        roleQuery = rl.queryObject()
+                        role = roleQuery.filter(Role.name == pg_account).first()
                         
                         if role == None:
                             rl.name = pg_account
@@ -149,20 +149,55 @@ class ContentGroup(QObject,HashableMixin):
                     
             #Initialize lookup values
             initLookups()
-            
-class TableContentGroup(ContentGroup):
+
+class ViewContentGroup(ContentGroup):
+    """
+    Groups operations for a database view. In most databases, a view only supports read operations.
+    """
+    read_op = QApplication.translate("DatabaseContentGroup", "Select")
+
+    def __init__(self,username,groupName,action=None):
+        ContentGroup.__init__(self,username,action)
+        self._groupName = groupName
+        self._createReadContentItem()
+
+    def readContentItem(self):
+        """
+        Returns Read/Select content item.
+        """
+        return self._readCnt
+
+    def canRead(self):
+        """
+        Returns whether the current user has read permissions.
+        """
+        return self.hasPermission(self._readCnt)
+
+    def _createReadContentItem(self):
+        """
+        Create the read/select content item.
+        """
+        self._readCnt = Content()
+        self._readCnt.name = self._buildName(self.read_op)
+        self.addContentItem(self._readCnt)
+
+    def _buildName(self,contentName):
+        """
+        Appends group name to the content name
+        """
+        return "{0} {1}".format(contentName, self._groupName)
+
+class TableContentGroup(ViewContentGroup):
     """
     For grouping CRUD operations for a specific model corresponding
     to a given database table.
     """
     create_op = QApplication.translate("DatabaseContentGroup", "Create")
-    read_op = QApplication.translate("DatabaseContentGroup", "Select")
     update_op = QApplication.translate("DatabaseContentGroup", "Update")
     delete_op = QApplication.translate("DatabaseContentGroup", "Delete")
     
     def __init__(self,username,groupName,action = None):
-        ContentGroup.__init__(self,username,action)
-        self._groupName = groupName
+        ViewContentGroup.__init__(self,username,groupName,action)
         self._createDbOpContent()
         
     def _createDbOpContent(self):
@@ -173,11 +208,7 @@ class TableContentGroup(ContentGroup):
         self._createCnt = Content()
         self._createCnt.name = self._buildName(self.create_op)
         self.addContentItem(self._createCnt)
-        
-        self._readCnt = Content()
-        self._readCnt.name = self._buildName(self.read_op)
-        self.addContentItem(self._readCnt)
-        
+
         self._updateCnt = Content()
         self._updateCnt.name = self._buildName(self.update_op)
         self.addContentItem(self._updateCnt)
@@ -186,23 +217,11 @@ class TableContentGroup(ContentGroup):
         self._deleteCnt.name = self._buildName(self.delete_op)
         self.addContentItem(self._deleteCnt)
         
-    def _buildName(self,contentName):
-        """
-        Appends group name to the content name
-        """
-        return "{0} {1}".format(contentName, self._groupName)
-        
     def createContentItem(self):
         """
         Returns Create content item.
         """
         return self._createCnt
-    
-    def readContentItem(self):
-        """
-        Returns Read/Select content item.
-        """
-        return self._readCnt
     
     def updateContentItem(self):
         """
@@ -215,12 +234,6 @@ class TableContentGroup(ContentGroup):
         Returns Delete content item.
         """
         return self._deleteCnt
-    
-    def canRead(self):
-        """
-        Returns whether the current user has read permissions.
-        """
-        return self.hasPermission(self._readCnt)
     
     def canCreate(self):
         """
@@ -239,6 +252,42 @@ class TableContentGroup(ContentGroup):
         Returns whether the current user has delete permissions.
         """
         return self.hasPermission(self._deleteCnt)
+
+class LayersContentGroup(ContentGroup):
+    """
+    Content group for registering spatial layers. This group is not associated with any QAction.
+    """
+    def __init__(self,username):
+        ContentGroup.__init__(self,username,None)
+        self._spatialContentGroups = []
+        self._createLayerContentItems()
+
+    def _createLayerContentItems(self):
+        """
+        Create content items for each layer item in the database.
+        """
+        from stdm.data import  spatial_tables,pg_views
+
+        spTables = spatial_tables()
+        views = pg_views()
+
+        for spTable in spTables:
+            #Check if the table is a view
+            viewIndex = getIndex(views,spTable)
+            if viewIndex == -1: #It is a table
+                layerContentGroup = TableContentGroup(self._username,spTable)
+            else:
+                layerContentGroup = ViewContentGroup(self._username,spTable)
+
+            self._spatialContentGroups.append(layerContentGroup)
+
+    def contentGroups(self):
+        """
+        :return: List of registered content groups for table and view-based layers.
+        :rtype: list
+        """
+        return self._spatialContentGroups
+
         
         
         
