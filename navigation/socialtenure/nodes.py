@@ -661,7 +661,6 @@ class PropertyNode(BaseSTRNode):
                        
                        })
         '''
-        #QMessageBox.information(None,"test",str(self.propertyLabels.items()))
         
         #Set object values
         self._setObjectValues()

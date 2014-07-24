@@ -174,10 +174,6 @@ class PersonNodeFormatter(STRNodeFormatter):
                 self.setSTRNodeChild(strModel, pNode)
                 spModel=spModels.queryObject().filter(spUnitModel.id == strModel.spatial_unit).first()
                 self.setPropertyNodeChild(spModel, pNode,spUnitModel)
-#                 if isinstance(strModel.Conflict,Conflict):
-#                     self.setConflictNodeChild(strModel.Conflict, pNode)
-#                 if isinstance(strModel.Taxation,Taxation):
-#                     self.setTaxationNodeChild(strModel.Taxation, pNode)
             
         return self.rootNode
     

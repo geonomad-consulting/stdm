@@ -16,15 +16,138 @@ email                : gkahiu@gmail.com
  *                                                                         *
  ***************************************************************************/
 """
-from PyQt4.QtGui import QApplication
+from PyQt4.QtGui import (
+    QApplication,
+    QAction
+)
 from PyQt4.QtCore import pyqtSignal,QObject
 
 from stdm.security import Authorizer, SecurityException
-from stdm.data import Content, initLookups, Role, STDMDb, Base
+from stdm.data import (
+    Content,
+    initLookups,
+    Role,
+    STDMDb,
+    Base,
+    PseudoEnum,
+    app_dbconn
+)
+from stdm.settings import RegistryConfig
 from stdm.utils import randomCodeGenerator,HashableMixin,getIndex
 from sqlalchemy import Table
 
-__all__ = ["ContentGroup,TableContentGroup"]
+__all__ = ["ContentGroup,TableContentGroup","ContentItem"]
+
+class ContentItem(object):
+    """
+    Module that needs to be registered in the database with the corresponding
+    permissions set.
+    """
+    def __init__(self,content,permission,container_item=None):
+        """
+        :param content: A generic content item describing its attributes.
+        :type content: Content
+
+        :param permission: A class defining the permission set of the content.
+        This must be a subclass of PseudoEnum object.
+        :type permission: PseudoEnum
+
+        :param container_item: Instance of Qt widget that will link this content item
+        to the UI.
+        """
+        self._content = content
+        self._permission = permission
+        self._container_item = container_item
+
+        #Assert if there is an existing copy of the content
+        if self._content.code != "":
+            cnt = Content()
+            queryOj = cnt.queryObject().filter(Content.code == self._content.code).one()
+
+        else:
+            msg = QApplication.translate("ContentItem","Content code cannot be empty")
+            raise AttributeError(msg)
+
+        db_mappings = self._permission.model_mappings()
+
+        if len(db_mappings) > 0:
+            self._content.registered_permissions = db_mappings
+
+    @staticmethod
+    def content_from_qaction(self,qaction,code="",category=""):
+        """
+        :param qaction: A QAction object.
+        :type qaction: QAction
+
+        :param code: Unique identifier for the content.
+        :type code: str
+
+        :param category: The logical grouping of the content. By default if not specified,
+        then the content will be under the 'General' category.
+        :type category: str
+
+        :returns: SQLAlchemy content object initialized with the corresponding arg values.
+        :rtype: Content
+        """
+        cnt = Content()
+        cnt.name = qaction.text()
+
+        if code != "": cnt.code = code
+
+        if category != "": cnt.category = category
+
+        return cnt
+
+    def set_container_item(self,container_item):
+        """
+        Set the Qt object that is to be associated with the content item.
+
+        :param container_item: Instance of Qt object.
+        :type container_item: QObject
+        """
+        self._containerItem = container_item
+
+    def containerItem(self):
+        """
+        :returns: Returns an instance of a ContainerItem associated with this group.
+        :rtype: QObject
+        """
+        return self._containerItem
+
+    def register(self):
+        """
+        Register the content to the database repository.
+        """
+        username = data.app_dbconn.User.UserName
+        sys_admin_account = RegistryConfig.sys_admin()
+
+        if sys_admin_account == "":
+            msg = QApplication.translate("ContentItem","System administrator account is empty.")
+            raise RuntimeError(msg)
+
+        if username == sys_admin_account:
+            #Check if the content exists
+            query_cnt = Content()
+            cn = query_cnt.queryObject().filter(Content.code == self._content.code).first()
+
+            if cn == None:
+                self._content.save()
+
+                #Grant permissions to the sys_admin_account
+                rl = Role()
+                query_role = rl.queryObject().filter(Role.name == sys_admin_account).first()
+
+                if query_role == None:
+                    rl.name = sys_admin_account
+                    rl.permissions = self._content.registered_permissions
+                    rl.save()
+
+                else:
+                    query_role.permissions.append(self._content.registered_permissions)
+                    query_role.update()
+
+            #Initialize lookup values
+            initLookups()
 
 class ContentGroup(QObject,HashableMixin):
     """
@@ -33,7 +156,7 @@ class ContentGroup(QObject,HashableMixin):
     contentAuthorized = pyqtSignal(Content)
     registeredItems = []
     
-    def __init__(self,username,containerItem = None,parent = None):
+    def  __init__(self,username,containerItem = None,parent = None):
         QObject.__init__(self,parent)
         HashableMixin.__init__(self)
         self._username = username
@@ -120,6 +243,8 @@ class ContentGroup(QObject,HashableMixin):
         Registers the content items into the database. Registration only works for a 
         postgres user account.
         """
+        return
+
         pg_account = "postgres"   
         
         if self._username == pg_account:

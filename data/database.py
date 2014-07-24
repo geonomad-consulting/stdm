@@ -246,28 +246,126 @@ class Content(Model,Base):
     Abstract class which is implemented by contents items that need to be registered based
     on the scope of the particular instance of STDM customization.    
     '''
-    __tablename__ = "content_base"
-    id = Column(Integer,primary_key = True)
-    category = Column(String(100),default=QApplication.translate("ContentItem","Standard"))
-    name = Column(String(100), unique = True)
-    code = Column(String(100),unique = True) 
-    roles = relationship("Role", secondary = "content_roles", backref = "contents")  
+    __tablename__ = "content"
+    id = Column(Integer,primary_key=True)
+    category = Column(String(100),default=QApplication.translate("Content","General"))
+    name = Column(String(100), unique=True)
+    code = Column(String(100),unique=True)
+    registered_permissions = relationship("Permission",backref="content",cascade='all, delete-orphan')
     
 class Role(Model,Base):
-    '''
+    """
     Model for the database-wide system roles. These are manually synced with the roles in the
     system catalog.
-    '''
+    """
     __tablename__ = "role"
-    id = Column(Integer,primary_key =True)
-    name = Column(String(100), unique = True)
+    id = Column(Integer,primary_key=True)
+    name = Column(String(100), unique=True)
     description = Column(String)
+    permissions = relationship("Permission", secondary="roles_permissions", backref="roles")
 
-#Table for mapping the many-to-many association of content item to system roles  
-content_roles_table = Table("content_roles", Base.metadata,
-                            Column('content_base_id',Integer, ForeignKey('content_base.id'), primary_key = True),
-                            Column('role_id',Integer, ForeignKey('role.id'), primary_key = True)
+class Permission(Model,Base):
+        __tablename__ = 'permission'
+
+        id = Column(Integer,primary_key=True)
+        value = Column(String(20),nullable=False)
+        context = Column(String(20),default=QApplication.translate("Permission","Base"))
+        content_id = Column(Integer,ForeignKey("content.id"))
+        __mapper_args__ = {
+            'polymorphic_on':context,
+            'polymorphic_identity':'base'
+        }
+
+#Table for mapping the many-to-many association of content item to system roles
+roles_permissions_table = Table("roles_permissions", Base.metadata,
+                            Column('role_id',Integer, ForeignKey('role.id'), primary_key = True),
+                            Column('permission_id',Integer, ForeignKey('permission.id'), primary_key = True)
                             )
+
+class EnumSymbol(object):
+    """Define a fixed symbol tied to a parent class."""
+
+    def __init__(self, cls_, name, value, description):
+        self.cls_ = cls_
+        self.name = name
+        self.value = value
+        self.description = description
+
+    def __reduce__(self):
+        """Allow unpickling to return the symbol
+        linked to the DeclEnum class."""
+        return getattr, (self.cls_, self.name)
+
+    def __iter__(self):
+        return iter([self.value, self.description])
+
+    def __repr__(self):
+        return "<%s>" % self.name
+
+class EnumMeta(type):
+    """Generate new DeclEnum classes."""
+
+    def __init__(cls, classname, bases, dict_):
+        cls._reg = reg = cls._reg.copy()
+        for k, v in dict_.items():
+            if isinstance(v, tuple):
+                enum_value = v[0]
+                sym = reg[enum_value] = EnumSymbol(cls, k, *v)
+                setattr(cls, k, sym)
+
+        return type.__init__(cls, classname, bases, dict_)
+
+    def __iter__(cls):
+        return iter(cls._reg.values())
+
+class PseudoEnum(object):
+        """Declarative pseudo-enumeration."""
+
+        __metaclass__ = EnumMeta
+        model_class = Permission
+        value_column = "value"
+        context_column = "context"
+        _reg = {}
+
+        @classmethod
+        def from_string(cls, value):
+            try:
+                return cls._reg[value]
+            except KeyError:
+                raise ValueError(
+                        "Invalid value for %r: %r" %
+                        (cls.__name__, value)
+                    )
+
+        @classmethod
+        def values(cls):
+            return cls._reg.keys()
+
+        @classmethod
+        def model_mappings(cls):
+            if not hasattr(cls,"context"):
+                msg = "'%s' attribute required"
+                raise RuntimeError(msg)
+
+            mappings = []
+
+            enums = cls._reg.values()
+            enum_values = [ev[0] for ev in enums]
+
+            for enum_v in enum_values:
+                model = cls.model_class()
+                setattr(model,cls.value_column,enum_v)
+                setattr(model,cls.context_column,cls.context)
+
+                mappings.append(model)
+
+            return mappings
+
+class UIPermission(PseudoEnum):
+    """
+    Generic permission set for accessing a single UI component.
+    """
+    access = "access","Access"
 
 class AdminSpatialUnitSet(Model,Base):
     '''

@@ -120,9 +120,15 @@ class OGRReader(object):
         for col,value in columnValueMapping.iteritems():
             if hasattr(modelInstance,col):
                 setattr(modelInstance,col,value)
-        
-        self._dbSession.add(modelInstance)
-        self._dbSession.commit()
+        try:
+
+            self._dbSession.add(modelInstance)
+            self._dbSession.commit()
+        except:
+            self._dbSession.rollback()
+            raise
+        finally:
+            self._dbSession.close()
     
     def featToDb(self,targettable,columnmatch,append,parentdialog,geomColumn=None,geomCode=-1):
         '''

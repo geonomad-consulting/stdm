@@ -6,5 +6,9 @@ from .container_loader import QtContainerLoader
 from signals import STDMContentSignal
 from treeloader import TreeSummaryLoader
 from propertybrowser import GMAP_SATELLITE, OSM, PropertyBrowser
-from content_group import ContentGroup, TableContentGroup
+from .content_group import (
+    ContentGroup,
+    TableContentGroup,
+    ContentItem
+)
 #from socialtenure import PersonNodeFormatter,BaseSTRNode, STRNode, PropertyNode, ConflictNode

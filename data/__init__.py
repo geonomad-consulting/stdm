@@ -1,6 +1,10 @@
 from .config import DatabaseConfig
 from connection import DatabaseConnection
-from database import STDMDb,Base,Model
+from .database import (STDMDb,
+                      Base,
+                      Model,
+                      PseudoEnum
+)
 from database import Content, Role, Enumerator,Respondent, LookupBase, CheckGender,CheckMaritalStatus, \
  SocialTenureRelationshipMixin, CheckSocialTenureRelationship, CheckRespondentType, \
  CheckWitnessRelationship, CheckHouseUseType, CheckLandType, CheckHouseType, CheckSavingsOption,\

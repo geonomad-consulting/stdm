@@ -18,19 +18,20 @@ email                : gkahiu@gmail.com
  ***************************************************************************/
 """
 from PyQt4.QtCore import QSettings
+from PyQt4.QtGui import QApplication
 
 #Names of registry keys
 NETWORK_DOC_RESOURCE = "NetDocumentResource"
 PATHKEYS=['Config','NetDocumentResource','ComposerOutputs','ComposerTemplates']
 DATABASE_LOOKUP = "LookupInit"
+SYS_ADMIN_ACCOUNT = "SysAdmin"
 
 class RegistryConfig(object):
-    '''
-    Utility class for reading and writing STDM user settings in Windows Registry
-    '''
-    def __init__(self):
-        self.groupPath = "STDM"
-    
+    """
+    Utility class for reading and writing STDM user settings in Windows Registry.
+    """
+    group_path = "STDM"
+
     def read(self,items):
         '''
         Get the value of the user defined items from the STDM registry tree
@@ -39,14 +40,16 @@ class RegistryConfig(object):
         settings = QSettings()        
         settings.beginGroup("/")
         groups = settings.childGroups()
+
         for group in groups:
-            if str(group) == self.groupPath:
+            if str(group) == self.group_path:
                 for t in items:
-                    tKey = self.groupPath + "/" + t
+                    tKey = self.group_path + "/" + t
                     if settings.contains(tKey):                        
                         tValue = settings.value(tKey)
                         userKeys[t] = tValue
-                break        
+                break
+
         return userKeys
     
     def write(self, settings):
@@ -54,13 +57,31 @@ class RegistryConfig(object):
         Write items in settings dictionary to the STDM registry
         '''
         uSettings = QSettings()
-        stdmGroup = "/" + self.groupPath
+        stdmGroup = "/" + self.group_path
+
         uSettings.beginGroup(stdmGroup)
+
         for k,v in settings.iteritems():
             uSettings.setValue(k,v)
+
         uSettings.endGroup()
         uSettings.sync()
-        
+
+    @staticmethod
+    def sys_admin():
+        """
+        :return: Account name of the system administrator
+        :rtype: str
+        """
+        reg_conf = RegistryConfig()
+        sys_admin = reg_conf.read([SYS_ADMIN_ACCOUNT])
+
+        if len(sys_admin) == 0:
+            msg = QApplication.translate("RegistryConfig","System admin registry key could not be found.")
+            raise KeyError(msg)
+
+        return sys_admin[SYS_ADMIN_ACCOUNT]
+
 class QGISRegistryConfig(RegistryConfig):
     """
     Class for reading and writing QGIS-wide registry settings.
@@ -68,7 +89,8 @@ class QGISRegistryConfig(RegistryConfig):
     """
     def __init__(self,path):
         RegistryConfig.__init__(self)
-        self.groupPath = path
+        self.group_path = path
+
             
         
         
