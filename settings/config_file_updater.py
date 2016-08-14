@@ -38,8 +38,9 @@ from ..data.pg_utils import export_data, import_data, pg_table_exists
 
 COLUMN_TYPE_DICT = {'character varying': 'VARCHAR', 'date': 'DATE',
                     'serial': 'SERIAL', 'integer': 'INT', 'lookup':
-                        'LOOKUP', 'double precision': 'DOUBLE', 'GEOMETRY':
-                        'GEOMETRY', 'FOREIGN_KEY': 'FOREIGN_KEY', }
+                    'LOOKUP', 'double precision': 'DOUBLE', 'GEOMETRY':
+                    'GEOMETRY', 'FOREIGN_KEY': 'FOREIGN_KEY', 'boolean': 'BOOL'
+                    , 'text': 'TEXT'}
 COLUMN_PROPERTY_DICT = {'SERIAL': {"unique": "False", "tip": "",
                                     "minimum": "-9223372036854775808",
                                     "maximum": "9223372036854775807",
@@ -109,107 +110,7 @@ class ConfigurationFileUpdater(object):
                            'str_relations')
         self.parent = None
         self.upgrade = False
-
-    def _check_config_folder_exists(self):
-        """
-        Checks if .stdm folder exists
-        :returns True if folder exists else False
-        :rtype bool
-        """
-        if os.path.isdir(self.file_handler.localPath()):
-            return True
-        else:
-            return False
-
-    def _create_config_folder(self):
-        """
-        Creates .stdm folder if it doesn't exist
-        """
-        self.file_handler.createDir(self.file_handler.localPath())
-
-    def _check_config_file_exists(self, config_file):
-        """
-        Checks if config file exists
-        :returns True if folder exists else False
-        :rtype bool
-        """
-        if os.path.isfile(os.path.join(self.file_handler.localPath(),
-                                       config_file)):
-            return True
-        else:
-            return False
-
-    def _get_doc_element(self, path):
-        """
-        Reads provided config file
-        :returns QDomDocument, QDomDocument.documentElement()
-        :rtype tuple
-        """
-        config_file = os.path.join(self.file_handler.localPath(), path)
-        config_file = QFile(config_file)
-        if not config_file.open(QIODevice.ReadOnly):
-            raise IOError('Cannot read configuration file. Check read '
-                          'permissions.')
-        doc = QDomDocument()
-
-        status, msg, line, col = doc.setContent(config_file)
-        if not status:
-            raise ConfigurationException(u'Configuration file cannot be '
-                                         u'loaded: {0}'.format(msg))
-
-        doc_element = doc.documentElement()
-
-        return doc, doc_element
-
-    def _check_config_version(self):
-        """
-        Checks configuration version
-        :returns True or False
-        :rtype boolean
-        """
-        doc, doc_element = self._get_doc_element("configuration.stc")
-
-        config_version = doc_element.attribute('version')
-
-        if config_version:
-            config_version = float(config_version)
-        else:
-
-            # Fatal error
-            raise ConfigurationException('Error extracting version '
-                                         'number from the '
-                                         'configuration file.')
-        if self.config.VERSION == config_version:
-            return True
-        else:
-            return False
-
-    def _copy_config_file_from_template(self):
-        """
-        Copies configuration from template
-        """
-        shutil.copy(os.path.join(self.file_handler.defaultConfigPath(),
-                                 "configuration.stc"),
-                    self.file_handler.localPath())
-
-    def _rename_old_config_file(self, old_config_file, path):
-        """
-        Renames old configuration file
-        """
-        old_file_wt_ext = "stdmConfig.xml".rstrip(".xml")
-        dt = str(datetime.datetime.now())
-        timestamp = time.strftime('%Y_%m_%d_%H_%M')
-        new_file = os.path.join(path, "{0}_{1}.xml".format(old_file_wt_ext,
-                                                           timestamp))
-        os.rename(old_config_file, new_file)
-
-    def _remove_old_config_file(self, config_file):
-        """
-        Delete config file
-        :param config_file:
-        """
-        os.remove(os.path.join(self.file_handler.localPath(),
-                               config_file))
+        self.config_file_operations = ConfigFileOperations()
 
     def _set_lookup_data(self, lookup_name, element):
 
@@ -234,6 +135,7 @@ class ConfigurationFileUpdater(object):
                 for j in range(lookup_node.count()):
                     lookup = lookup_node.item(j).toElement().text()
                     code = lookup[0:3].upper()
+                    # code = ""
                     lookup_dict[code] = lookup
                     lookup_names[lookup] = count
                     count += 1
@@ -435,24 +337,6 @@ class ConfigurationFileUpdater(object):
                 self.profile_dict[profile + "_relations"] = self.relations_dict
                 self.entities_lookup_relations[profile] = self.profile_dict
 
-    def _create_config_file(self, config_file_name):
-
-        """
-        Method to create configuration file
-        :param config_file_name:
-        :return:
-        """
-        self.config_file = QFile(os.path.join(self.file_handler.localPath(),
-                                 config_file_name))
-
-        if not self.config_file.open(QIODevice.ReadWrite | QIODevice.Truncate |
-                                     QIODevice.Text):
-            QMessageBox.warning(None, "Config Error", "Cannot write file {"
-                                "0}: \n {2}".format(
-                                 self.config_file.fileName(),
-                                 self.config_file.errorString()))
-        return
-
     def _set_sp_unit_part_tables(self, relation_values):
         """
         Method determines which relation is either spatial unit type or party
@@ -510,6 +394,7 @@ class ConfigurationFileUpdater(object):
                                                 "relationship_document_type")
                 code_value = self.doc_old.createElement("CodeValue")
                 code_value.setAttribute("code", "G")
+                # code_value.setAttribute("code", "")
                 code_value.setAttribute("value", "General")
                 value_list.appendChild(code_value)
                 value_lists.appendChild(value_list)
@@ -923,12 +808,13 @@ class ConfigurationFileUpdater(object):
         self.doc_old.clear()
 
         # Rename the old configuration file after parsing it
-        if self._check_config_file_exists("stdmConfig.xml"):
-            # self._remove_old_config_file("stdmConfig.xml")
+        if self.config_file_operations.check_config_file_exists(
+                "stdmConfig.xml"):
             old_config_file = os.path.join(
                         self.file_handler.localPath(), "stdmConfig.xml")
             path = self.file_handler.localPath()
-            self._rename_old_config_file(old_config_file, path)
+            self.config_file_operations.rename_old_config_file(
+                old_config_file, path)
 
     def load(self):
 
@@ -936,31 +822,34 @@ class ConfigurationFileUpdater(object):
         Entry code to class
         :return:
         """
-        if self._check_config_folder_exists():
+        if self.config_file_operations.check_config_folder_exists():
 
             # Check if old configuration file exists
-            if self._check_config_file_exists("stdmConfig.xml"):
+            if self.config_file_operations.check_config_file_exists(
+                    "stdmConfig.xml"):
 
                 if QMessageBox.information(
                         None, "Update STDM Configuration",
                         "Do you want to upgrade your configuration file "
                         "and import your data?\n\n"
-                        "If you click No, your configuration and data will "
+                        "\tIf you click Yes, you will be able to access your "
+                        "old configuration with the data.\n"
+                        "\tIf you click No, your configuration and data will "
                         "no longer be accessible to STDM.\n"
-                        "If you click Yes, you will be able to access your "
-                        "old configuration with the data.", QMessageBox.Yes
+                        , QMessageBox.Yes
                                 | QMessageBox.No) == QMessageBox.Yes:
                     self.upgrade = True
                     self.old_config_file = True
-                    doc, root = self._get_doc_element(os.path.join(
-                        self.file_handler.localPath(), "stdmConfig.xml"))
+                    doc, root = self.config_file_operations.get_doc_element(
+                        "stdmConfig.xml")
                     child_nodes = root.childNodes()
 
                     # Parse old configuration to dictionary
                     self._set_version_profile(child_nodes)
 
                     # Create config file
-                    self._create_config_file("configuration.stc")
+                    self.config_file_operations.create_config_file(
+                        "configuration.stc")
 
                     # Create configuration node and version
                     self._populate_config_from_old_config()
@@ -970,29 +859,36 @@ class ConfigurationFileUpdater(object):
                     old_config_file = os.path.join(
                         self.file_handler.localPath(), "stdmConfig.xml")
                     path = self.file_handler.localPath()
-                    self._rename_old_config_file(old_config_file, path)
-                    self._copy_config_file_from_template()
+                    self.config_file_operations.rename_old_config_file(
+                        old_config_file, path)
+                    self.config_file_operations.\
+                        copy_config_file_from_template()
                     return self.upgrade
 
             else:
                 # Check of new config format exists
-                if self._check_config_file_exists("configuration.stc"):
+                if self.config_file_operations.check_config_file_exists(
+                        "configuration.stc"):
                     return self.upgrade
                 else:
                     # if new config format doesn't exist copy from template
-                    self._copy_config_file_from_template()
+                    self.config_file_operations.\
+                        copy_config_file_from_template()
                     return self.upgrade
         else:
-            self._create_config_folder()
-            self._copy_config_file_from_template()
+            self.config_file_operations.create_config_folder()
+            self.config_file_operations.copy_config_file_from_template()
             return self.upgrade
+
+    def load_from_options(self):
+        pass
 
     def check_version(self):
         """
         Check version of configuration.stc
         :return:
         """
-        return self._check_config_version()
+        return self.config_file_operations.check_config_version()
 
     def update_config_file_version(self):
         """
@@ -1000,14 +896,14 @@ class ConfigurationFileUpdater(object):
         """
         if self.old_config_file:
             self.version = unicode(self.config.VERSION)
-            self._create_config_file("configuration.stc")
+            self.config_file_operations.create_config_file("configuration.stc")
             self._populate_config_from_old_config()
         else:
-            doc, root = self._get_doc_element(os.path.join(
-                self.file_handler.localPath(), "configuration.stc"))
+            doc, root = self.config_file_operations.get_doc_element("configuration.stc")
 
             if not root.isNull() and root.hasAttribute('version'):
-                self._create_config_file("configuration.stc")
+                self.config_file_operations.create_config_file(
+                    "configuration.stc")
                 if float(root.attribute('version')) < self.config.VERSION:
                     root.setAttribute('version', '1.2')
                     stream = QTextStream(self.config_file)
@@ -1023,8 +919,8 @@ class ConfigurationFileUpdater(object):
         """
         if self.old_config_file:
 
-            doc, root = self._get_doc_element(os.path.join(
-                self.file_handler.localPath(), "configuration.stc"))
+            doc, root = self.config_file_operations.get_doc_element(
+                "configuration.stc")
             child_nodes = root.childNodes()
             for child_i in range(child_nodes.count()):
                 child_node = child_nodes.item(child_i).toElement()
@@ -1075,13 +971,16 @@ class ConfigurationFileUpdater(object):
                                                 "code", missing_lookup[
                                                         0:3].upper())
 
+                                            # code_value.setAttribute(
+                                            #     "code", "")
+
                                         if missing_lookup not in \
                                                 code_values_lists:
 
                                             value_list_node.appendChild(
                                                 code_value)
 
-            self._create_config_file("configuration.stc")
+            self.config_file_operations.create_config_file("configuration.stc")
             stream = QTextStream(self.config_file)
             stream << doc.toString()
             self.config_file.close()
@@ -1278,6 +1177,7 @@ class ConfigurationFileUpdater(object):
                                                     "Data already exists in "
                                                     "table {0}".format(
                                                         social_tenure_table))
+                            self.iface.messageBar().clearWidgets()
                     else:
                         pass
 
@@ -1288,3 +1188,132 @@ class ConfigurationFileUpdater(object):
                 progress.setValue(progress_i + 1)
                 progress_i += 1
             self.iface.messageBar().clearWidgets()
+
+
+class ConfigFilePaser(object):
+
+    def __init__(self):
+        pass
+
+
+class ConfigFileOperations(object):
+
+    def __init__(self):
+        self.file_handler = FilePaths()
+        self.config = StdmConfiguration.instance()
+
+    def get_doc_element(self, local_config_file):
+        """
+        Reads provided config file
+        :param local_config_file: Config File
+        :returns QDomDocument, QDomDocument.documentElement()
+        :rtype tuple
+        """
+        config_file = os.path.join(self.file_handler.localPath(),
+                                   local_config_file)
+        config_file = QFile(config_file)
+        if not config_file.open(QIODevice.ReadOnly):
+            raise IOError('Cannot read configuration file. Check read '
+                          'permissions.')
+        doc = QDomDocument()
+
+        status, msg, line, col = doc.setContent(config_file)
+        if not status:
+            raise ConfigurationException(u'Configuration file cannot be '
+                                         u'loaded: {0}'.format(msg))
+
+        doc_element = doc.documentElement()
+
+        return doc, doc_element
+
+    def check_config_folder_exists(self):
+        """
+        Checks if .stdm folder exists
+        :returns True if folder exists else False
+        :rtype bool
+        """
+        if os.path.isdir(self.file_handler.localPath()):
+            return True
+        else:
+            return False
+
+    def check_config_file_exists(self, config_file):
+        """
+        Checks if config file exists
+        :returns True if folder exists else False
+        :rtype bool
+        """
+        if os.path.isfile(os.path.join(self.file_handler.localPath(),
+                                       config_file)):
+            return True
+        else:
+            return False
+
+    def create_config_folder(self):
+        """
+        Creates .stdm folder if it doesn't exist for Mac and Linux users
+        """
+        self.file_handler.createDir(self.file_handler.localPath())
+
+    def check_config_version(self):
+        """
+        Checks configuration version
+        :returns True or False
+        :rtype boolean
+        """
+        doc, doc_element = self.get_doc_element(
+            "configuration.stc")
+
+        config_version = doc_element.attribute('version')
+
+        if config_version:
+            config_version = float(config_version)
+        else:
+
+            # Fatal error
+            raise ConfigurationException('Error extracting version '
+                                         'number from the '
+                                         'configuration file.')
+        if self.config.VERSION == config_version:
+            return True
+        else:
+            return False
+
+    def copy_config_file_from_template(self):
+        """
+        Copies configuration from template
+        """
+        shutil.copy(os.path.join(self.file_handler.defaultConfigPath(),
+                                 "configuration.stc"),
+                    self.file_handler.localPath())
+
+    def rename_old_config_file(self, old_config_file, path):
+        """
+        Renames old configuration file
+        """
+        old_file_wt_ext = "stdmConfig.xml".rstrip(".xml")
+        dt = str(datetime.datetime.now())
+        timestamp = time.strftime('%Y_%m_%d_%H_%M')
+        new_file = os.path.join(path, "{0}_{1}.xml".format(old_file_wt_ext,
+                                                           timestamp))
+        os.rename(old_config_file, new_file)
+
+        return
+
+    def create_config_file(self, config_file_name):
+
+        """
+        Method to create configuration file
+        :param config_file_name:
+        :return:
+        """
+        self.config_file = QFile(os.path.join(self.file_handler.localPath(),
+                                 config_file_name))
+
+        if not self.config_file.open(QIODevice.ReadWrite | QIODevice.Truncate |
+                                     QIODevice.Text):
+            QMessageBox.warning(None, "Config Error", "Cannot write file {"
+                                "0}: \n {2}".format(
+                                 self.config_file.fileName(),
+                                 self.config_file.errorString()))
+        return
