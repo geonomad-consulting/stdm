@@ -35,7 +35,7 @@ from stdm.settings import current_profile, save_current_profile
 
 from stdm.data.configuration.exception import ConfigurationException
 from stdm.data.configuration.stdm_configuration import StdmConfiguration
-from stdm.settings.config_file_updater import ConfigurationFileUpdater
+from settings.config_file_updater import ConfigFileNormalLoader
 from stdm.data.configuration.config_updater import ConfigurationSchemaUpdater
 
 from stdm.ui.change_pwd_dlg import changePwdDlg
@@ -144,7 +144,7 @@ class STDMQGISLoader(object):
             QDesktopServices.HomeLocation) \
                       + '/.stdm/configuration.stc'
         self.config_serializer = ConfigurationFileSerializer(self.config_path)
-        self.configuration_file_updater = ConfigurationFileUpdater(self.iface)
+        self.configuration_file_updater = ConfigFileNormalLoader(self.iface)
 
     def initGui(self):
         # Initial actions on starting up the application

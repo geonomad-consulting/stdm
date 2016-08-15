@@ -93,7 +93,6 @@ class ConfigurationFileUpdater(object):
         self.table_dict = OrderedDict()
         self.table_list = []
         self.lookup_dict = OrderedDict()
-        self.config_file = None
         self.profile_dict = OrderedDict()
         self.profile_list = []
         self.entities_lookup_relations = OrderedDict()
@@ -105,12 +104,15 @@ class ConfigurationFileUpdater(object):
         self.config = StdmConfiguration.instance()
         self.old_config_file = False
         self.entities = []
-        self.lookup_colum_name_values = {}
+        self.lookup_column_name_values = {}
         self.exclusions = ('supporting_document', 'social_tenure_relationship',
                            'str_relations')
         self.parent = None
         self.upgrade = False
         self.config_file_operations = ConfigFileOperations()
+
+        self.config_file = self.config_file_operations.create_config_file(
+            "configuration.stc")
 
     def _set_lookup_data(self, lookup_name, element):
 
@@ -143,9 +145,9 @@ class ConfigurationFileUpdater(object):
         # Renames check lookup so that it conforms to new lookup type
         self.lookup_dict[lookup_name] = lookup_dict
         if lookup_name == "check_social_tenure_type":
-            self.lookup_colum_name_values["tenure_type"] = lookup_names
+            self.lookup_column_name_values["tenure_type"] = lookup_names
         else:
-            self.lookup_colum_name_values[
+            self.lookup_column_name_values[
                 lookup_name.lstrip("check_")] = lookup_names
 
     def _set_table_columns(self, table_name, element):
@@ -195,7 +197,7 @@ class ConfigurationFileUpdater(object):
                                 lookup_no_list.append(k)
                         if len(lookup_no_list) < 1:
                             self.lookup_dict[lookup_val] = {"G": "General"}
-                            self.lookup_colum_name_values[lookup_val.lstrip(
+                            self.lookup_column_name_values[lookup_val.lstrip(
                                 "check_")] = OrderedDict([(u'General', 1)])
                         column_dict["lookup"] = unicode(
                             column_node.attribute('lookup'))
@@ -311,7 +313,7 @@ class ConfigurationFileUpdater(object):
                         lookup_code
                     self.check_doc_relation_lookup_dict[relation[0]] = lookup
 
-    def _set_version_profile(self, element):
+    def set_version_profile(self, element):
         """
         Internal function to load version and profile to dictionary
         :param element:
@@ -785,7 +787,7 @@ class ConfigurationFileUpdater(object):
 
         return config
 
-    def _populate_config_from_old_config(self):
+    def populate_config_from_old_config(self):
         """
         Read old configuration file and uses it content to populate new
         config file
@@ -832,9 +834,9 @@ class ConfigurationFileUpdater(object):
                         None, "Update STDM Configuration",
                         "Do you want to upgrade your configuration file "
                         "and import your data?\n\n"
-                        "\tIf you click Yes, you will be able to access your "
+                        "If you click Yes, you will be able to access your "
                         "old configuration with the data.\n"
-                        "\tIf you click No, your configuration and data will "
+                        "If you click No, your configuration and data will "
                         "no longer be accessible to STDM.\n"
                         , QMessageBox.Yes
                                 | QMessageBox.No) == QMessageBox.Yes:
@@ -845,14 +847,14 @@ class ConfigurationFileUpdater(object):
                     child_nodes = root.childNodes()
 
                     # Parse old configuration to dictionary
-                    self._set_version_profile(child_nodes)
+                    self.set_version_profile(child_nodes)
 
                     # Create config file
                     self.config_file_operations.create_config_file(
                         "configuration.stc")
 
                     # Create configuration node and version
-                    self._populate_config_from_old_config()
+                    self.populate_config_from_old_config()
                     return self.upgrade
 
                 else:
@@ -880,111 +882,76 @@ class ConfigurationFileUpdater(object):
             self.config_file_operations.copy_config_file_from_template()
             return self.upgrade
 
-    def load_from_options(self):
-        pass
-
-    def check_version(self):
-        """
-        Check version of configuration.stc
-        :return:
-        """
-        return self.config_file_operations.check_config_version()
-
-    def update_config_file_version(self):
-        """
-        Updates the version of configuration.stc
-        """
-        if self.old_config_file:
-            self.version = unicode(self.config.VERSION)
-            self.config_file_operations.create_config_file("configuration.stc")
-            self._populate_config_from_old_config()
-        else:
-            doc, root = self.config_file_operations.get_doc_element("configuration.stc")
-
-            if not root.isNull() and root.hasAttribute('version'):
-                self.config_file_operations.create_config_file(
-                    "configuration.stc")
-                if float(root.attribute('version')) < self.config.VERSION:
-                    root.setAttribute('version', '1.2')
-                    stream = QTextStream(self.config_file)
-                    stream << doc.toString()
-                    self.config_file.close()
-                    doc.clear()
-
     def _add_missing_lookup_config(self, lookup, missing_lookup):
         """
         Add missing value_list to configuration file
         :param lookup:
         :param missing_lookup:
         """
-        if self.old_config_file:
 
-            doc, root = self.config_file_operations.get_doc_element(
+        doc, root = self.config_file_operations.get_doc_element(
                 "configuration.stc")
-            child_nodes = root.childNodes()
-            for child_i in range(child_nodes.count()):
-                child_node = child_nodes.item(child_i).toElement()
+        child_nodes = root.childNodes()
+        for child_i in range(child_nodes.count()):
+            child_node = child_nodes.item(child_i).toElement()
 
-                if child_node.tagName() == "Profile":
-                    profile_child_nodes = child_node.childNodes()
+            if child_node.tagName() == "Profile":
+                profile_child_nodes = child_node.childNodes()
 
-                    for profile_i in range(profile_child_nodes.count()):
-                        profile_nodes = profile_child_nodes.item(profile_i).\
+                for profile_i in range(profile_child_nodes.count()):
+                    profile_nodes = profile_child_nodes.item(profile_i).\
                             toElement()
-                        if profile_nodes.tagName() == "ValueLists":
-                            value_list_nodes = profile_nodes.childNodes()
+                    if profile_nodes.tagName() == "ValueLists":
+                        value_list_nodes = profile_nodes.childNodes()
 
-                            for value_list_i in range(
+                        for value_list_i in range(
                                     value_list_nodes.count()):
-                                value_list_node = value_list_nodes.item(
+                            value_list_node = value_list_nodes.item(
                                     value_list_i).toElement()
-                                if value_list_node.tagName() == "ValueList":
-                                    lookup_name = unicode(
+                            if value_list_node.tagName() == "ValueList":
+                                lookup_name = unicode(
                                         value_list_node.attribute('name'))
 
-                                    if lookup_name == lookup:
-                                        code_values_lists = []
-                                        code_value_nodes = \
+                                if lookup_name == lookup:
+                                    code_values_lists = []
+                                    code_value_nodes = \
                                             value_list_node.childNodes()
-                                        for code_v_i in range(
+                                    for code_v_i in range(
                                                 code_value_nodes.count()):
-                                            code_value_node = \
+                                        code_value_node = \
                                                     code_value_nodes.item(
                                                         code_v_i).toElement()
-                                            code_value = unicode(
+                                        code_value = unicode(
                                                 code_value_node.attribute(
                                                     'value'))
-                                            code_values_lists.append(
+                                        code_values_lists.append(
                                                 code_value)
 
-                                        code_value = doc.createElement(
+                                    code_value = doc.createElement(
                                             "CodeValue")
-                                        code_value.setAttribute("value",
+                                    code_value.setAttribute("value",
                                                                 missing_lookup)
 
-                                        code = missing_lookup
+                                    code = missing_lookup
 
-                                        if code == 0:
-                                            code_value.setAttribute("code", "")
-                                        else:
-                                            code_value.setAttribute(
+                                    if code == 0:
+                                        code_value.setAttribute("code", "")
+                                    else:
+                                        code_value.setAttribute(
                                                 "code", missing_lookup[
                                                         0:3].upper())
 
-                                            # code_value.setAttribute(
-                                            #     "code", "")
-
-                                        if missing_lookup not in \
+                                    if missing_lookup not in \
                                                 code_values_lists:
 
-                                            value_list_node.appendChild(
+                                        value_list_node.appendChild(
                                                 code_value)
 
-            self.config_file_operations.create_config_file("configuration.stc")
-            stream = QTextStream(self.config_file)
-            stream << doc.toString()
-            self.config_file.close()
-            doc.clear()
+        # self.config_file_operations.create_config_file("configuration.stc")
+        stream = QTextStream(self.config_file)
+        stream << doc.toString()
+        self.config_file.close()
+        doc.clear()
 
     def _match_lookup(self, values, lookup_data, lookup_col_index,
                       num_lookups, check_up):
@@ -1129,7 +1096,7 @@ class ConfigurationFileUpdater(object):
                         # Converts Var Char lookup to foreign key and add to
                         #  config file if it dosen't exist
                         for check_up, lookup_data in \
-                                self.lookup_colum_name_values.iteritems():
+                                self.lookup_column_name_values.iteritems():
                             if check_up in columns:
                                 lookup_col_index = columns.index(check_up)
                                 num_lookups = len(lookup_data)
@@ -1190,10 +1157,112 @@ class ConfigurationFileUpdater(object):
             self.iface.messageBar().clearWidgets()
 
 
-class ConfigFilePaser(object):
+class ConfigFileNormalLoader(object):
 
-    def __init__(self):
-        pass
+    def __init__(self, iface):
+
+        self.config = StdmConfiguration.instance()
+        self.config_file_operations = ConfigFileOperations()
+        self.config_file_parser = ConfigurationFileUpdater(iface=self.iface)
+        self.file_handler = FilePaths()
+        self.iface = iface
+        self.old_config_file = False
+        self.upgrade = False
+        self.version = None
+        self.config_file = self.config_file_operations.create_config_file(
+            "configuration.stc")
+
+    def load(self):
+
+        """
+        Entry code to class
+        :return:
+        """
+        if self.config_file_operations.check_config_folder_exists():
+
+            # Check if old configuration file exists
+            if self.config_file_operations.check_config_file_exists(
+                    "stdmConfig.xml"):
+
+                if QMessageBox.information(
+                        None, "Update STDM Configuration",
+                        "Do you want to upgrade your configuration file "
+                        "and import your data?\n\n"
+                        "If you click Yes, you will be able to access your "
+                        "old configuration with the data.\n"
+                        "If you click No, your configuration and data will "
+                        "no longer be accessible to STDM.\n"
+                        , QMessageBox.Yes
+                                | QMessageBox.No) == QMessageBox.Yes:
+                    self.upgrade = True
+                    self.old_config_file = True
+                    doc, root = self.config_file_operations.get_doc_element(
+                        "stdmConfig.xml")
+                    child_nodes = root.childNodes()
+
+                    # Parse old configuration to dictionary
+                    self.config_file_parser.set_version_profile(child_nodes)
+
+                    # Create config file
+                    self.config_file_operations.create_config_file(
+                        "configuration.stc")
+
+                    # Create configuration node and version
+                    self.config_file_parser.populate_config_from_old_config()
+                    return self.upgrade
+
+                else:
+                    old_config_file = os.path.join(
+                        self.file_handler.localPath(), "stdmConfig.xml")
+                    path = self.file_handler.localPath()
+                    self.config_file_operations.rename_old_config_file(
+                        old_config_file, path)
+                    self.config_file_operations.\
+                        copy_config_file_from_template()
+                    return self.upgrade
+
+            else:
+                # Check of new config format exists
+                if self.config_file_operations.check_config_file_exists(
+                        "configuration.stc"):
+                    return self.upgrade
+                else:
+                    # if new config format doesn't exist copy from template
+                    self.config_file_operations.\
+                        copy_config_file_from_template()
+                    return self.upgrade
+        else:
+            self.config_file_operations.create_config_folder()
+            self.config_file_operations.copy_config_file_from_template()
+            return self.upgrade
+
+    def check_version(self):
+        """
+        Check version of configuration.stc
+        :return:
+        """
+        return self.config_file_operations.check_config_version()
+
+    def update_config_file_version(self):
+        """
+        Updates the version of configuration.stc
+        """
+        if self.old_config_file:
+            self.version = unicode(self.config.VERSION)
+            self.config_file_operations.create_config_file("configuration.stc")
+            self.config_file_parser.populate_config_from_old_config()
+        else:
+            doc, root = self.config_file_operations.get_doc_element("configuration.stc")
+
+            if not root.isNull() and root.hasAttribute('version'):
+                self.config_file_operations.create_config_file(
+                    "configuration.stc")
+                if float(root.attribute('version')) < self.config.VERSION:
+                    root.setAttribute('version', '1.2')
+                    stream = QTextStream(self.config_file)
+                    stream << doc.toString()
+                    self.config_file.close()
+                    doc.clear()
 
 
 class ConfigFileOperations(object):
@@ -1201,6 +1270,7 @@ class ConfigFileOperations(object):
     def __init__(self):
         self.file_handler = FilePaths()
         self.config = StdmConfiguration.instance()
+        self.config_file = None
 
     def get_doc_element(self, local_config_file):
         """
@@ -1316,4 +1386,4 @@ class ConfigFileOperations(object):
                                 "0}: \n {2}".format(
                                  self.config_file.fileName(),
                                  self.config_file.errorString()))
-        return
+        return self.config_file
